@@ -1,0 +1,21 @@
+# Never commit datasets, generated results, personal sessions or local backups.
+results/
+analysis0914/results/
+analysis0914/validation/
+analysis0914/generation_diagnostics/
+real_data/
+*.csv
+*.rds
+*.RData
+*.Rhistory
+.Rproj.user/
+*.xlsx
+*.xls
+*.pdf
+*.png
+*.zip
+*.tar.gz
+*.log
+*.bak*
+.DS_Store
+Thumbs.db
