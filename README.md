@@ -21,15 +21,15 @@ BLAS/LAPACK libraries and operating systems can produce small differences in
 estimates and borderline numerical eligibility; exact binary equality is not promised.
 
 Download or clone this repository. Run the following commands from its root,
-the folder containing `reproduce.R` and `analysis0914/`.
+the folder containing `reproduce.R` and `simulation/`.
 
 ## Quick start
 
 Check the numerical core and synthetic observation mechanism (no model fitting):
 
 ```sh
-Rscript --vanilla analysis0914/tests/test_core.R
-Rscript --vanilla analysis0914/tests/test_generation.R
+Rscript --vanilla simulation/tests/test_core.R
+Rscript --vanilla simulation/tests/test_generation.R
 ```
 
 Run one full-size replication for the reference scenario and summarize it:
@@ -65,15 +65,15 @@ computation used parallel cluster jobs; its elapsed time is not a laptop estimat
 
 The four knot scenarios share generated datasets and event/visit seeds. Their
 Weibull fits form one paired reference experiment, not four independent studies.
-Additional historical scenario definitions in the core are not part of this
-seven-scenario study and are not invoked by the launcher.
+Two further age scenarios (beta1age015, beta1age03) are defined in core.R but are
+not part of this seven-scenario study and are not run by the launcher.
 
 ## Individual scenarios and parallel chunks
 
 For example, run replications 1-10 of the 1,000-replication reference scenario:
 
 ```sh
-Rscript --vanilla analysis0914/run_simulation.R run knot22 1 10 --n=5000 --n.rep=1000 --out=results/production
+Rscript --vanilla simulation/run_simulation.R run knot22 1 10 --n=5000 --n.rep=1000 --out=results/production
 ```
 
 For chunk j in 1,...,100, use START=(j-1)*10+1 and END=j*10. Keep code, settings
@@ -81,7 +81,7 @@ and output root identical across chunks. Never launch overlapping ranges into
 the same output directory. After all expected replications finish, combine:
 
 ```sh
-Rscript --vanilla analysis0914/run_simulation.R combine knot22 --n=5000 --n.rep=1000 --out=results/production
+Rscript --vanilla simulation/run_simulation.R combine knot22 --n=5000 --n.rep=1000 --out=results/production
 ```
 
 For parallel execution, set OMP_NUM_THREADS, OPENBLAS_NUM_THREADS and
@@ -98,11 +98,11 @@ visit beyond administrative censoring. Only visits completed by Y2=min(T2,C)
 contribute to the observed interval.
 
 For detected illness, the interval uses the preceding negative visit (or zero)
-and first positive visit, with R<=Y2. Without a positive visit, the working
-observation is L=Y2, R=Inf and delta1=0. No examination is added at Y2.
-The working Case 3 interpretation T1=Inf is distinct from latent event truth,
-which is retained for missed-illness diagnostics. The working likelihood does
-not integrate every undetected latent illness path under discrete inspection.
+and first positive visit, with R<=Y2. Without a positive visit, the observation
+is L=Y2, R=Inf and delta1=0 (Case 3 if death is observed, otherwise Case 4).
+Latent event times are kept for diagnostics, including the number of subjects
+whose illness occurred but was not detected before death or censoring; the
+likelihood treats these subjects as having no recorded illness.
 
 ## Outputs and interpretation
 
@@ -124,18 +124,15 @@ entry point for an inspected resume. Combine only after checking completeness.
 ## Source map
 
 - `reproduce.R`: optional smoke/full-study launcher; no fitting unless requested.
-- `analysis0914/run_simulation.R`: run and combine entry point.
-- `analysis0914/generate_dataset.R`: generation-only diagnostics.
-- `analysis0914/R/core.R`: scenarios, event generator, likelihood and fitting.
-- `analysis0914/R/visits.R`: visit schedules and interval construction.
-- `analysis0914/R/gradient.R`: derivative support.
-- `analysis0914/R/io.R`: manifests, saved records, summaries and figures.
-- `analysis0914/tests/`: generation and numerical checks.
+- `simulation/run_simulation.R`: run and combine entry point.
+- `simulation/generate_dataset.R`: generation-only diagnostics.
+- `simulation/R/core.R`: scenarios, event generator, likelihood and fitting.
+- `simulation/R/visits.R`: visit schedules and interval construction.
+- `simulation/R/gradient.R`: derivative support.
+- `simulation/R/io.R`: manifests, saved records, summaries and figures.
+- `simulation/tests/`: generation and numerical checks.
 
-The numerical source is preserved from the completed study release; the folder
-name `analysis0914` is retained for code compatibility. SHA256SUMS.txt identifies
-the supplied scientific source files. The optional comparison with an older
-release in the generation test is skipped in this standalone repository.
+SHA256SUMS.txt lists checksums of the source files.
 
 For manuscript reproducibility, record the Git commit used alongside the run's
 R session information. Do not treat a later modified checkout as the same release.

@@ -1,8 +1,8 @@
 # Never commit datasets, generated results, personal sessions or local backups.
 results/
-analysis0914/results/
-analysis0914/validation/
-analysis0914/generation_diagnostics/
+simulation/results/
+simulation/validation/
+simulation/generation_diagnostics/
 real_data/
 *.csv
 *.rds

@@ -14,16 +14,16 @@ Sys.setenv(OMP_NUM_THREADS="1",OPENBLAS_NUM_THREADS="1",MKL_NUM_THREADS="1")
 full <- arg=="--full"
 out <- file.path(root,"results",if(full) "production" else "smoke")
 if(dir.exists(out)) stop("Output exists. Preserve it; inspect the run before resuming with the underlying entry point.")
-scenarios <- if(full) c("knot02","knot12","knot22","knot23","theta0001","theta05","beta1age008") else "knot22"
+scenario.names <- if(full) c("knot02","knot12","knot22","knot23","theta0001","theta05","beta1age008") else "knot22"
 nrep <- if(full) "1000" else "1"
 run <- function(...) {
   status <- system2(file.path(R.home("bin"),"Rscript"),
-    shQuote(c("--vanilla","analysis0914/run_simulation.R",...)))
+    shQuote(c("--vanilla","simulation/run_simulation.R",...)))
   if(status!=0L) stop("Execution failed; see preceding output. Remaining work stopped.")
 }
 dir.create(out,recursive=TRUE)
 capture.output(sessionInfo(),file=file.path(out,"sessionInfo.txt"))
-for(s in scenarios) {
+for(s in scenario.names) {
   run("run",s,"1",nrep,"--n=5000",paste0("--n.rep=",nrep),paste0("--out=",out))
   run("combine",s,"--n=5000",paste0("--n.rep=",nrep),paste0("--out=",out))
 }
