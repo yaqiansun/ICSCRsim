@@ -1,7 +1,10 @@
 # Model settings, data generation, likelihood, fitting and summaries. All times are in days.
 # No dependency beyond the recommended R packages survival and splines.
 VERSION <- "1.0"
-CORE_DIR <- dirname(normalizePath(sys.frame(1)$ofile))
+CORE_DIR <- local({ # folder of this file, also when source() is called from another sourced script
+  src <- Filter(function(e) !is.null(e$ofile), sys.frames())
+  dirname(normalizePath(src[[length(src)]]$ofile))
+})
 source(file.path(CORE_DIR, "gradient.R"), local=TRUE)
 source(file.path(CORE_DIR, "visits.R"), local=TRUE)
 COVARIATES <- c("age", "sex", "setting")
