@@ -37,7 +37,7 @@ check(all(d$L1[d$d1==0]==d$Y2[d$d1==0]) && all(d$R1[d$d1==0]==Inf),
 check(all(is.infinite(d$T1.working[d$d1==0 & d$d2==1])), 'Case 3 recorded as T1.working = Inf')
 out <- file.path(root,'simulation/validation')
 dir.create(out,showWarnings=FALSE)
-scenario.names <- c('knot02','knot12','knot22','knot23','theta0001','theta05','beta1age008')
+scenario.names <- c('knot02','knot12','knot22','knot23','theta0001','theta05','beta11_008')
 rows <- lapply(scenario.names,function(sc) {
   x <- generate(2,sc,s)
   check(isTRUE(validate.data(x)),paste('model input validation:',sc))

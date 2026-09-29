@@ -53,7 +53,7 @@ replications per scenario. The convenience launcher runs **sequentially**;
 on a personal computer, a full study can take days or weeks. The published-study
 computation used parallel cluster jobs; its elapsed time is not a laptop estimate.
 
-| Scenario | Frailty variance | Basis counts (transitions 1, 2, 3) | Transition-1 age coefficient |
+| Scenario | Frailty variance | Basis counts (transitions 1, 2, 3) | True beta_11 |
 |---|---:|---|---:|
 | knot02 | 0.25 | (4, 3, 6) | 0.05 |
 | knot12 | 0.25 | (4, 4, 6) | 0.05 |
@@ -61,11 +61,11 @@ computation used parallel cluster jobs; its elapsed time is not a laptop estimat
 | knot23 | 0.25 | (4, 6, 6) | 0.05 |
 | theta0001 | 0.0001 | (4, 5, 6) | 0.05 |
 | theta05 | 0.5 | (4, 5, 6) | 0.05 |
-| beta1age008 | 0.25 | (4, 5, 6) | 0.08 |
+| beta11_008 | 0.25 | (4, 5, 6) | 0.08 |
 
 The four knot scenarios share generated datasets and event/visit seeds. Their
 Weibull fits form one paired reference experiment, not four independent studies.
-Two further age scenarios (beta1age015, beta1age03) are defined in core.R but are
+Two further scenarios (beta11_015, beta11_03) are defined in core.R but are
 not part of this seven-scenario study and are not run by the launcher.
 
 ## Individual scenarios and parallel chunks

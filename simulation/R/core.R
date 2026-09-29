@@ -7,7 +7,13 @@ CORE_DIR <- local({ # folder of this file, also when source() is called from ano
 })
 source(file.path(CORE_DIR, "gradient.R"), local=TRUE)
 source(file.path(CORE_DIR, "visits.R"), local=TRUE)
-COVARIATES <- c("age", "sex", "setting")
+# Covariate column names. The simulation uses X1, X2, X3 (thesis notation); the real-data
+# entry script sets COVARIATES <- c("age", "sex", "setting") after sourcing this file.
+COVARIATES <- c("X1", "X2", "X3")
+# beta.names(): regression parameter names, transition by transition. With X1-X3 they are
+# beta_11, ..., beta_33 (beta_kj: transition k, covariate j); otherwise beta1_age, ..., beta3_setting.
+beta.names <- function() unlist(lapply(1:3, function(k)
+  if (identical(COVARIATES, paste0("X", 1:3))) paste0("beta_", k, 1:3) else paste0("beta", k, "_", COVARIATES)))
 
 # settings(): every numerical setting in one list; it is stored with each result (manifest).
 #   Data: n, n.rep, cens (C ~ Uniform), visit.mean, seeds. Likelihood: lambda (ridge), quadrature
@@ -33,19 +39,19 @@ ladder <- list(
   M466 = list(degree = c(2L,3L,3L), internal = c(1L,2L,2L)),
   M467 = list(degree = c(2L,3L,3L), internal = c(1L,2L,3L)))
 # scenarios: simulation settings. knotXY = transition 2 with X interior knots and degree Y
-# (transitions 1 and 3 fixed); theta = frailty variance; beta1age = transition-1 age effect.
+# (transitions 1 and 3 fixed); theta = frailty variance; beta11 = true beta_11 (X1, transition 1).
 # The seven scenarios in the study are knot02, knot12, knot22, knot23, theta0001, theta05 and
-# beta1age008; beta1age015 and beta1age03 are defined but not part of the study.
+# beta11_008; beta11_015 and beta11_03 are defined but not part of the study.
 scenarios <- list(
-  knot02 = list(theta=.25, degree=c(2L,2L,3L), internal=c(1L,0L,2L), beta1age=.05),
-  knot12 = list(theta=.25, degree=c(2L,2L,3L), internal=c(1L,1L,2L), beta1age=.05),
-  knot22 = list(theta=.25, degree=c(2L,2L,3L), internal=c(1L,2L,2L), beta1age=.05),
-  knot23 = list(theta=.25, degree=c(2L,3L,3L), internal=c(1L,2L,2L), beta1age=.05),
-  theta0001 = list(theta=.0001, degree=c(2L,2L,3L), internal=c(1L,2L,2L), beta1age=.05),
-  theta05 = list(theta=.5, degree=c(2L,2L,3L), internal=c(1L,2L,2L), beta1age=.05),
-  beta1age008 = list(theta=.25, degree=c(2L,2L,3L), internal=c(1L,2L,2L), beta1age=.08),
-  beta1age015 = list(theta=.25, degree=c(2L,3L,3L), internal=c(1L,2L,2L), beta1age=.15),
-  beta1age03 = list(theta=.25, degree=c(2L,3L,3L), internal=c(1L,2L,2L), beta1age=.30))
+  knot02 = list(theta=.25, degree=c(2L,2L,3L), internal=c(1L,0L,2L), beta11=.05),
+  knot12 = list(theta=.25, degree=c(2L,2L,3L), internal=c(1L,1L,2L), beta11=.05),
+  knot22 = list(theta=.25, degree=c(2L,2L,3L), internal=c(1L,2L,2L), beta11=.05),
+  knot23 = list(theta=.25, degree=c(2L,3L,3L), internal=c(1L,2L,2L), beta11=.05),
+  theta0001 = list(theta=.0001, degree=c(2L,2L,3L), internal=c(1L,2L,2L), beta11=.05),
+  theta05 = list(theta=.5, degree=c(2L,2L,3L), internal=c(1L,2L,2L), beta11=.05),
+  beta11_008 = list(theta=.25, degree=c(2L,2L,3L), internal=c(1L,2L,2L), beta11=.08),
+  beta11_015 = list(theta=.25, degree=c(2L,3L,3L), internal=c(1L,2L,2L), beta11=.15),
+  beta11_03 = list(theta=.25, degree=c(2L,3L,3L), internal=c(1L,2L,2L), beta11=.30))
 
 # hash(): MD5 fingerprint of an R object (used to record each generated dataset).
 # atomic.save(): write to a temporary file, then rename; never overwrite a completed result.
@@ -85,7 +91,7 @@ validate.data <- function(d, real=FALSE) {
   if (any(!is.finite(d$R1[a]) | d$L1[a]>=d$R1[a] | d$R1[a]>d$Y2[a])) stop("Invalid observed event interval")
   if (any(d$R1[!a]!=Inf) || any(d$L1[!a]>d$Y2[!a])) stop("Invalid unobserved-event interval")
   if (real && any(d$L1[!a]!=d$Y2[!a])) stop("Real-data L1=Y2 convention violated")
-  if (any(!d$sex %in% 0:1 | !d$setting %in% 0:1)) stop("Binary covariates must be coded 0/1")
+  if (any(!unlist(d[COVARIATES[2:3]]) %in% 0:1)) stop("Binary covariates must be coded 0/1")
   invisible(TRUE)
 }
 
@@ -99,13 +105,13 @@ generate <- function(rep, scenario, set=settings()) {
   # share the same data (paired comparison).
   set.seed(set$seed.offset+rep)
   n <- set$n
-  # Covariates: age ~ N(55, 12), sex ~ Bernoulli(0.70), setting ~ Bernoulli(0.40).
-  X <- cbind(age=round(rnorm(n,55,12),1), sex=rbinom(n,1,.70),
-             setting=rbinom(n,1,.40))
-  # True values (Weibull fit to the heart failure data). beta_k = (age, sex, setting) for
-  # transitions 0->1, 0->2, 1->2; baseline cumulative hazard kappa_k * t^alpha_k, t in days.
-  # Age is not centred, so kappa_k refers to age 0.
-  beta <- list(c(sc$beta1age,.15,-.74), c(.05,-.22,-.45), c(.03,.19,-.21))
+  # Covariates: X1 ~ N(55, 12^2), X2 ~ Bernoulli(0.70), X3 ~ Bernoulli(0.40).
+  X <- cbind(round(rnorm(n,55,12),1), rbinom(n,1,.70), rbinom(n,1,.40))
+  colnames(X) <- COVARIATES
+  # True values (Weibull fit to the heart failure data). beta_k = (beta_k1, beta_k2, beta_k3)
+  # for transitions 0->1, 0->2, 1->2; baseline cumulative hazard kappa_k * t^alpha_k, t in days.
+  # X1 is not centred, so kappa_k refers to X1 = 0.
+  beta <- list(c(sc$beta11,.15,-.74), c(.05,-.22,-.45), c(.03,.19,-.21))
   k <- exp(c(-9.23,-11.99,-7.81)); a <- exp(c(-.56,-.12,-.42))
   theta <- if(set$frailty) sc$theta else 0
   # Shared frailty gamma ~ Gamma(1/theta, 1/theta): mean 1, variance theta; it multiplies
@@ -141,16 +147,15 @@ generate <- function(rep, scenario, set=settings()) {
   d$T1.working <- ifelse(d1==0 & d2==1, Inf, NA_real_)
   # Check: every subject without detected illness has L1 = Y2.
   stopifnot(all(d$L1[d1==0]==d$Y2[d1==0]))
-  d$sex <- as.integer(d$sex)
-  d$setting <- as.integer(d$setting)
+  d[COVARIATES[2:3]] <- lapply(d[COVARIATES[2:3]], as.integer)
   # Final input checks, then return the dataset.
   validate.data(d); d
 }
 # true.values(): true regression coefficients and log(theta) of a scenario (for bias and coverage).
 true.values <- function(scenario, frailty=TRUE) {
   sc <- scenarios[[scenario]]
-  b <- c(sc$beta1age,.15,-.74,.05,-.22,-.45,.03,.19,-.21)
-  names(b) <- unlist(lapply(1:3,function(k)paste0("beta",k,"_",COVARIATES)))
+  b <- c(sc$beta11,.15,-.74,.05,-.22,-.45,.03,.19,-.21)
+  names(b) <- beta.names()
   if(frailty) c(b,log_theta=log(sc$theta)) else b
 }
 
@@ -343,7 +348,7 @@ weibull.start <- function(d,set=settings()) {
   base<-unlist(lapply(1:3,function(k)c(-aa[k]*coef(fits[[k]])[1],log(aa[k]))),use.names=FALSE)
   names(base)<-as.vector(rbind(paste0("log_kappa",1:3),paste0("log_alpha",1:3)))
   beta<-unlist(lapply(1:3,function(k)unname(-aa[k]*coef(fits[[k]])[-1])))
-  names(beta)<-unlist(lapply(1:3,function(k)paste0("beta",k,"_",COVARIATES)))
+  names(beta)<-beta.names()
   c(base,if(set$frailty)c(log_theta=log(set$theta.starts[1])),beta)
 }
 # bs.start(): B-spline starting control points = least-squares projection (QR) of the fitted
@@ -361,14 +366,21 @@ numeric.gradient <- function(q,fn,h=1e-4) vapply(seq_along(q),function(j){
 },numeric(1))
 # inference(): standard errors and numerical checks at the estimate. The Hessian (curvature of
 # the objective) is computed twice by finite differences of the analytic gradient, with steps
-# 0.001 and 0.0005. SE = sqrt(diag(H^-1)).
+# 0.001 and 0.0005.
+# X1 takes values around 55 while X2 and X3 are 0/1, so the objective is far more
+# sensitive to the X1 coefficients (beta_11, beta_21, beta_31). These three are optimised
+# and differentiated on the scale q = beta/0.02, which balances the parameter scales for
+# the optimiser and the finite-difference Hessian; the estimates are unchanged.
+# SE = scale * sqrt(diag(H^-1)), with scale = 0.02 for these three and 1 otherwise;
+# reported SEs use the smaller step.
 inference <- function(par,obj,set=settings(),gradient=NULL) {
-  scale<-rep(1,length(par));scale[grepl("_age$",names(par))]<-.02
+  scale<-rep(1,length(par));scale[names(par)%in%beta.names()[c(1,4,7)]]<-.02
   q<-par/scale;fn<-function(x)obj(x*scale)
   gr<-if(is.null(gradient))NULL else function(x)gradient(x*scale)*scale
   getH<-function(step)tryCatch(optimHess(q,fn,gr=gr,control=list(ndeps=rep(step,length(q)))),error=function(e)NULL)
   H1<-getH(set$hessian.step);H2<-getH(set$hessian.step/2)
-  # inspect(): symmetrise H; Cholesky succeeds only if H is positive definite (a true minimum).
+  # inspect(): symmetrise H; Cholesky succeeds only if H is positive definite (positive local
+  # curvature; the gradient and convergence are checked separately).
   inspect<-function(H){
     if(is.null(H)||any(!is.finite(H)))return(NULL)
     H<-(H+t(H))/2;ch<-tryCatch(chol(H),error=function(e)NULL)
@@ -396,7 +408,8 @@ inference <- function(par,obj,set=settings(),gradient=NULL) {
   list(ok=ok,pd=pd,curvature.ok=curvature.ok,H=H,H.scaled=H2,H.scaled.other=H1,V=V,se=se,
     gradient=grad,standardized.gradient=gstat,se.relative.change=rel,
     scaled.condition=if(pd)max(b$eigen)/min(b$eigen) else Inf,
-    # theta.wald.weak flags SE(log theta) > 2, where a Wald interval for theta is unreliable.
+    # theta.wald.weak: diagnostic flag, SE(log theta) non-finite or > 2. It is saved only;
+    # it does not affect inference.ok or coverage.
     theta.wald.weak=if("log_theta"%in%names(se))!is.finite(se["log_theta"])||se["log_theta"]>2 else FALSE)
 }
 
@@ -409,8 +422,8 @@ fit <- function(d,model="Weibull",config=NULL,start=NULL,set=settings()) {
   obj<-objective(d,model,basis,set)
   gradient<-if(iswb)gradient.wb(d,set) else gradient.bs(d,basis,set)
   if(!is.finite(obj(start)))stop("Invalid starting values; no sentinel optimization is attempted")
-  # The three age coefficients are optimised on the scale beta/0.02 to balance parameter scales.
-  scale<-rep(1,length(start));scale[grepl("_age$",names(start))]<-.02
+  # The three X1 coefficients are optimised on the scale beta/0.02 (see inference()).
+  scale<-rep(1,length(start));scale[names(start)%in%beta.names()[c(1,4,7)]]<-.02
   fn<-function(q)obj(setNames(q*scale,names(start)))
   gr<-function(q)gradient(setNames(q*scale,names(start)))*scale
   run<-function(s){
@@ -449,8 +462,9 @@ fit <- function(d,model="Weibull",config=NULL,start=NULL,set=settings()) {
   if(!is.finite(best$nll))stop("All optimization starts failed")
   est<-setNames(best$par,names(start));details<-obj(est,TRUE)
   # Numerical checks. point.ok: optimizer code 0, objective change <= 0.001 when the nodes are
-  # doubled (64 -> 128) and <= 0.01 when the B-spline grid is doubled, non-negative curvature and
-  # max|score| <= 0.05. inference.ok additionally requires positive definite Hessians, SE change
+  # doubled (64 -> 128) and <= 0.01 when the equally spaced B-spline grid is doubled, no materially
+  # negative Hessian eigenvalue, and max|gradient of the penalized objective in scaled
+  # coordinates| <= 0.05. inference.ok additionally requires positive definite Hessians, SE change
   # <= 10% and standardized gradient <= 0.1. Ineligible fits are kept and reported, not replaced.
   check.obj<-objective(d,model,basis,set,nq=2L*set$quadrature)
   check.gradient<-if(iswb)gradient.wb(d,set,nq=2L*set$quadrature) else gradient.bs(d,basis,set,nq=2L*set$quadrature)
@@ -494,7 +508,8 @@ fit.row <- function(f) data.frame(Model=f$model,p=f$npar,loglik=f$loglik,
 # Point-estimate summaries (Est, Bias, SEe = SD of estimates) use fits with point.ok;
 # SEa (mean model SE) and coverage use fits with inference.ok. Coverage = proportion with
 # |est - truth| <= 1.96 SE (95% Wald interval). CI_success_fraction and
-# Covered_and_CI_available_fraction use all attempted replications as the denominator.
+# Covered_and_CI_available_fraction use the saved replications as the denominator (replications
+# never saved are not counted; see completion.csv).
 summarize <- function(results,truth,model) {
   fits<-lapply(results,function(z)z[[model]]); n<-length(fits)
   usable<-vapply(fits,function(f)!is.null(f)&&isTRUE(f$point.ok),logical(1))

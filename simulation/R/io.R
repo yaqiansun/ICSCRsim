@@ -98,7 +98,8 @@ real.outputs <- function(out,manifest,report="auto") {
     note="Ordinary AIC at ridge-regularized estimates; frailty boundary and optimization diagnostics must be considered.")
   write.csv(status,file.path(out,"tables","selection.csv"),row.names=FALSE)
   for(nm in names(fits))write.csv(estimate.table(fits[[nm]]),file.path(out,"tables",paste0("estimates_",nm,".csv")),row.names=FALSE)
-  # Explicit sensitivity table, coefficient ranges, and significance decisions.
+  # Regression estimates from each fitted model side by side (coefficient_sensitivity.csv).
+  # The ridge-penalty sensitivity is the separate sensitivity command.
   bnames<-grep("^beta",names(fits[[1]]$est),value=TRUE)
   sens<-data.frame(Parameter=bnames)
   for(nm in names(fits))sens[[nm]]<-fits[[nm]]$est[bnames]

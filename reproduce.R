@@ -14,7 +14,7 @@ Sys.setenv(OMP_NUM_THREADS="1",OPENBLAS_NUM_THREADS="1",MKL_NUM_THREADS="1")
 full <- arg=="--full"
 out <- file.path(root,"results",if(full) "production" else "smoke")
 if(dir.exists(out)) stop("Output exists. Preserve it; inspect the run before resuming with the underlying entry point.")
-scenario.names <- if(full) c("knot02","knot12","knot22","knot23","theta0001","theta05","beta1age008") else "knot22"
+scenario.names <- if(full) c("knot02","knot12","knot22","knot23","theta0001","theta05","beta11_008") else "knot22"
 nrep <- if(full) "1000" else "1"
 run <- function(...) {
   status <- system2(file.path(R.home("bin"),"Rscript"),

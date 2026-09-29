@@ -11,7 +11,7 @@ near(moment(c(.1,1,100),1e-20,2),-c(.1,1,100),1e-12,"frailty limit is stable nea
 
 # Analytic constant-hazard independent illness-death probabilities/densities.
 d<-data.frame(L1=c(0,3,0,3),R1=c(2,Inf,2,Inf),d1=c(1,0,1,0),Y2=c(3,3,3,3),d2=c(1,1,0,0),
-              age=rep(0,4),sex=rep(0,4),setting=rep(0,4))
+              X1=rep(0,4),X2=rep(0,4),X3=rep(0,4))
 k<-c(.2,.3,.4);p<-c(as.vector(rbind(log(k),rep(0,3))),rep(0,9));s<-set;s$frailty<-FALSE;s$lambda<-0
 obj<-objective(d,set=s)
 integ<-.2*exp(-.4*3)*(1-exp(-(.2+.3-.4)*2))/(.2+.3-.4)

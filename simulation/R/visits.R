@@ -44,6 +44,8 @@ observe.visits <- function(plan, onset, followup.end) {
              completed.visits=length(completed)))
   }
   # d1 = 0 (no completed visit >= T1; e.g. T1 = 33, Y2 = 35 above): L1 = Y2, R1 = Inf.
+  # This is a working convention: illness may still have occurred before Y2 without being
+  # detected; the Case 3-4 likelihood does not integrate over such paths.
   # last.negative.visit (last completed visit, 0 if none) and completed.visits are diagnostics only.
   c(L1=followup.end,R1=Inf,d1=0,
     last.negative.visit=if(length(completed)) tail(completed,1) else 0,
